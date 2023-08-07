@@ -1,20 +1,17 @@
 package ca.bjad.stubwebserver;
 
+import javax.swing.SwingUtilities;
+
+import ca.bjad.stubwebserver.ui.MainWindow;
+
 /**
  * The launch point for the application, starting the window. 
  *
  * @author 
  *   Ben Dougall
  */
-public class App
+public class App implements Runnable
 {
-   /**
-    * Hidden constuctor as this is technically a utility class.
-    */
-   private App()
-   {
-      
-   }
    
    /**
     * Launching point for the application. 
@@ -25,7 +22,13 @@ public class App
     */
    public static void main(String[] args)
    {
-      // Exit the application with a success return code.
-      System.exit(0);
+      SwingUtilities.invokeLater(new App());
+   }
+
+   @Override
+   public void run()
+   {
+      MainWindow window = new MainWindow();
+      window.setVisible(true);
    }
 }
