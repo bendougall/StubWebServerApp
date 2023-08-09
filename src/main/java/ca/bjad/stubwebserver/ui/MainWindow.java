@@ -7,7 +7,6 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
@@ -32,6 +31,7 @@ public class MainWindow extends JFrame implements StartButtonTriggeredListener, 
    private static final Dimension MINIMUM_SIZE = new Dimension(800, 600);
    
    private ConfigPanel configPanel = null;
+   private EventPanel eventPanel = null;
    
    /**
     * Constructor, setting up the window, the controls, and 
@@ -65,9 +65,8 @@ public class MainWindow extends JFrame implements StartButtonTriggeredListener, 
       configPanel.addStopButtonListener(this);
       contentPane.add(configPanel, BorderLayout.NORTH);
       
-      JPanel mainAreaStub = new JPanel(true);
-      mainAreaStub.add(new JLabel());
-      contentPane.add(mainAreaStub, BorderLayout.CENTER);
+      eventPanel = new EventPanel();
+      contentPane.add(eventPanel, BorderLayout.CENTER);
       
       return contentPane;
    }

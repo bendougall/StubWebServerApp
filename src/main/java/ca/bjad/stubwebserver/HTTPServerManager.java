@@ -2,13 +2,20 @@ package ca.bjad.stubwebserver;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.swing.SwingUtilities;
 
+import ca.bjad.stubwebserver.listeners.HTTPEventListener;
 import ca.bjad.stubwebserver.listeners.HTTPServerStateListener;
+import ca.bjad.stubwebserver.model.AbstractEventBean;
+import ca.bjad.stubwebserver.model.HTTPRequestEvent;
+import ca.bjad.stubwebserver.model.HTTPStatusEvent;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -36,6 +43,10 @@ public class HTTPServerManager
     * The listeners for the HTTP State events.
     */
    protected Set<HTTPServerStateListener> stateListeners = new LinkedHashSet<HTTPServerStateListener>();
+   /**
+    * The listeners for the HTTP events.
+    */
+   protected Set<HTTPEventListener> eventListeners = new LinkedHashSet<HTTPEventListener>();
    
    private HttpServer httpServer;   
    
@@ -78,11 +89,8 @@ public class HTTPServerManager
                {
                   @Override
                   public void handle(HttpExchange t) throws IOException 
-                  {
-                     System.out.println("Request from " + t.getLocalAddress().toString());
-                     System.out.println(" --> PATH: " + t.getRequestURI().toString());
-                     System.out.println(" --> METHOD: " + t.getRequestMethod());
-                     
+                  {  
+                     // Create the response data to send back from the request.
                      String response = "<html><body>Stubbed Page Returned</body></html>";
                      // Set the response header status and length
                      t.sendResponseHeaders(200, response.getBytes().length);
@@ -90,6 +98,17 @@ public class HTTPServerManager
                      OutputStream os = t.getResponseBody();
                      os.write(response.getBytes());
                      os.close();
+                     
+                     // Fire the event to the listeners
+                     HTTPRequestEvent event = new HTTPRequestEvent();
+                     event.setEndpoint(t.getRequestURI().toString());
+                     event.setMethod(t.getRequestMethod());
+                     event.setRequestor(t.getRemoteAddress().getAddress().toString());
+                     for (Entry<String, List<String>> header : t.getRequestHeaders().entrySet())
+                     {
+                        event.getHeaders().put(header.getKey(), header.getValue());
+                     }
+                     fireHTTPEventOccurredListeners(event);
                   }
                });
          //Create a default executor
@@ -100,6 +119,7 @@ public class HTTPServerManager
          serverStarted = true; 
          this.portNumber = portNumber;
          fireOnServerStartedListeners(portNumber);
+         fireHTTPEventOccurredListeners(new HTTPStatusEvent(true));
       }
       catch (Exception ex)
       {
@@ -116,6 +136,7 @@ public class HTTPServerManager
       
       serverStarted = false;
       fireOnServerStoppedListeners();
+      fireHTTPEventOccurredListeners(new HTTPStatusEvent(false));
    }
    
    /**
@@ -129,7 +150,7 @@ public class HTTPServerManager
    {
       return this.stateListeners.add(listener);
    }
-   
+
    /**
     * Removes a state listener from the manager. 
     * @param listener
@@ -140,6 +161,30 @@ public class HTTPServerManager
    public boolean removeHTTPServerStateListener(HTTPServerStateListener listener)
    {
       return this.stateListeners.remove(listener);
+   }
+   
+   /**
+    * Adds an event listener to the manager. 
+    * @param listener
+    *    The listener to add
+    * @return
+    *    True if the listener was added, false otherwise (duplicate).
+    */
+   public boolean addHTTPEventListener(HTTPEventListener listener)
+   {
+      return this.eventListeners.add(listener);
+   }
+
+   /**
+    * Removes an event listener from the manager. 
+    * @param listener
+    *    The listener to remove
+    * @return
+    *    True if the listener was removed, false otherwise.
+    */
+   public boolean removeHTTPEventListener(HTTPEventListener listener)
+   {
+      return this.eventListeners.remove(listener);
    }
    
    /**
@@ -187,6 +232,36 @@ public class HTTPServerManager
             for (HTTPServerStateListener listener : stateListeners)
             {
                listener.onServerStopped();
+            }
+         }
+      };
+      if (SwingUtilities.isEventDispatchThread())
+      {
+         r.run();
+      }
+      else
+      {
+         SwingUtilities.invokeLater(r);
+      }
+   }
+   
+   /**
+    * Fires the httpServerEventOccurred event for the event listeners with the
+    * event details for what occurred. Note: This will always fire on the EDT.
+    * 
+    * @param event
+    *    The event to notify the listeners with.
+    */
+   protected final void fireHTTPEventOccurredListeners(AbstractEventBean event)
+   {
+      Runnable r = new Runnable()
+      {         
+         @Override
+         public void run()
+         {
+            for (HTTPEventListener listener : eventListeners)
+            {
+               listener.httpServerEventOccurred(event);
             }
          }
       };
