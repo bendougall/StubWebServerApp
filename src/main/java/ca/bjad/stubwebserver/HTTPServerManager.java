@@ -2,7 +2,6 @@ package ca.bjad.stubwebserver;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedHashSet;
 import java.util.List;
